@@ -20,10 +20,10 @@
 /Graph/CourseInfosMoses
 /llama3/
 /backend_copy/
-/backend
+/backend/
 
 
-/SeleniumCrawler
-/scraping
-/MatrixBot
-/secrets
+/SeleniumCrawler/
+/scraping/
+/MatrixBot/
+/secrets/
