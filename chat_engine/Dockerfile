@@ -14,7 +14,7 @@ RUN apt-get update && \
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Copy requirements if you have one, else install directly
-COPY backend/requirements.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
@@ -28,7 +28,7 @@ RUN pip install transformers auto-gptq llama-index llama-index-llms-huggingface 
 WORKDIR /app
 
 # Copy your chat_engine code and data
-COPY chat_engine/ ./chat_engine/
+COPY chat_engine_llama.py ./
 COPY data/ ./data/
 COPY config.json ./
 

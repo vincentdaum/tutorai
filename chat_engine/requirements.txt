@@ -1,0 +1,7 @@
+transformers>=4.40.0
+auto-gptq>=0.7.1
+llama-index>=0.10.0
+llama-index-llms-huggingface>=0.1.8
+llama-index-embeddings-huggingface>=0.1.7
+sentence-transformers>=2.2.2
+torch>=2.1.0
