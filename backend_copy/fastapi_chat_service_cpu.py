@@ -43,9 +43,9 @@ from transformers import AutoTokenizer
 from llm_config import get_llm, get_embedding_model, get_chat_engine
 
 
-# chat_engine = get_chat_engine()
-# llm = get_llm()
-# embedding_model = get_embedding_model()
+chat_engine = get_chat_engine()
+llm = get_llm()
+embedding_model = get_embedding_model()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. Auth setup – load token from env
@@ -67,22 +67,24 @@ async def verify_bearer_token(authorization: str = Header(...)) -> None:
 app = FastAPI(title="TutorAI Chat API (CPU)")
 
 class TutorRequest(BaseModel):
-    client_id: str
-    conversation_id: str
     query: str
 
 class TutorResponse(BaseModel):
     answer: str
-    done: bool = True
+    done: bool = False
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. Non‑streaming endpoint
 # ──────────────────────────────────────────────────────────────────────────────
-@app.post("/api/v1/chat", response_model=TutorResponse, dependencies=[Depends(verify_bearer_token)])
+@app.post("/api/v1/chat", response_model=TutorResponse)
 async def chat(req: TutorRequest) -> TutorResponse:
     try:
-        #resp = chat_engine.chat(req.query)
-        resp = "Ello"
+        # Check if the query contains "done"
+        if "done" in req.query.lower():
+            return TutorResponse(answer="Session completed.")
+        
+        resp = chat_engine.chat(req.query)
+        # resp = "Hello"
         if hasattr(resp, "response"):
             answer = str(resp.response)
         else:
@@ -90,8 +92,6 @@ async def chat(req: TutorRequest) -> TutorResponse:
         return TutorResponse(answer=answer)
     except Exception as exc:
         raise HTTPException(500, detail=str(exc)) from exc
-    return TutorResponse(answer=answer)
-
 
 if __name__ == "__main__":
     uvicorn.run("fastapi_chat_service_cpu:app", host="0.0.0.0", port=8006, reload=True)

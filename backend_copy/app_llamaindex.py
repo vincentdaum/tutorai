@@ -242,7 +242,7 @@ from llm_config import get_llm, get_embedding_model, get_chat_engine
 #     fallback_handler=web_search,
 # )
 
-chat_engine = get_chat_engine()
+#chat_engine = get_chat_engine()
 llm = get_llm()
 embedding_model = get_embedding_model()
 
