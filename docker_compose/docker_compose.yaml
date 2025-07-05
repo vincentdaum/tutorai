@@ -1,0 +1,17 @@
+services: 
+  tutorai-mongo: 
+    image: mongo:latest
+    container_name: tutorai-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mingo_init.sh:/docker-entrypoint-initdb.d/mongo_init.sh
+    env_file:
+      - $HOME/REPO/secrets/tutorai.env
+    networks:
+      - tutorai-network
+    
+  
+    
