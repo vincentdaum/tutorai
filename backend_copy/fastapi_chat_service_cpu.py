@@ -40,54 +40,12 @@ from llama_index.llms.huggingface.base import HuggingFaceLLM
 from llama_index.embeddings.huggingface.base import HuggingFaceEmbedding
 
 from transformers import AutoTokenizer
+from llm_config import get_llm, get_embedding_model, get_chat_engine
 
-# ---------- 2.1  TinyLlama model & tokenizer on CPU ----------
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v0.4"
-EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Load tokenizer first so we can patch a minimal chat template if missing
-_tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-if _tokenizer.chat_template is None:
-    _tokenizer.chat_template = (
-        "{% for m in messages %}{{ m['role'] }}: {{ m['content'] }}\n{% endfor %}assistant: "
-    )
-
-llm = HuggingFaceLLM(
-    model_name="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
-    tokenizer_name="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
-    context_window=1024,
-    max_new_tokens=256,
-    device_map="auto"
-)
-
-embed_model = HuggingFaceEmbedding(model_name=EMBED_MODEL)
-
-Settings.llm = llm
-Settings.embed_model = embed_model
-Settings.chunk_size = 256
-
-# ---------- 2.2  Load vector index (assumes ./storage built by create_vector_index_cpu.py) ----------
-storage_context = StorageContext.from_defaults(persist_dir="./storage")
-index = load_index_from_storage(storage_context)
-
-# ---------- 2.3  Chat engine + memory ----------
-chat_store = SimpleChatStore()
-memory = ChatMemoryBuffer.from_defaults(token_limit=256,
-                                        chat_store=chat_store, 
-                                        chat_store_key="user1")
-
-chat_engine = index.as_chat_engine(
-    chat_mode="condense_plus_context",
-    memory=memory,
-    similarity_top_k=3,
-    llm=llm,
-    context_prompt=(
-        "Answer only in German. "
-        "You are a German chatbot who helps with TUB modules and technical information. "
-        "Relevant documents:\n{context_str}\n"
-    ),
-    verbose=False,
-)
+# chat_engine = get_chat_engine()
+# llm = get_llm()
+# embedding_model = get_embedding_model()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. Auth setup – load token from env
@@ -123,7 +81,8 @@ class TutorResponse(BaseModel):
 @app.post("/api/v1/chat", response_model=TutorResponse, dependencies=[Depends(verify_bearer_token)])
 async def chat(req: TutorRequest) -> TutorResponse:
     try:
-        resp = chat_engine.chat(req.query)
+        #resp = chat_engine.chat(req.query)
+        resp = "Ello"
         if hasattr(resp, "response"):
             answer = str(resp.response)
         else:
