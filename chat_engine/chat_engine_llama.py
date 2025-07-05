@@ -1,5 +1,5 @@
 import json
-import socket
+from flask import Flask, request, jsonify
 from transformers import AutoTokenizer, pipeline
 from auto_gptq import AutoGPTQForCausalLM
 from llama_index.core import VectorStoreIndex, Document
@@ -43,54 +43,34 @@ text_generator = pipeline(
     max_new_tokens=256
 )
 
-def build_prompt(query, context_docs):
+app = Flask(__name__)
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    query = data.get('message', '')
+    chat_memory = data.get('chat_memory', [])
+    # Optionally, you can use chat_memory to build a richer prompt
+    context_docs = retriever.retrieve(query)
     context_str = "\n".join([doc.text for doc in context_docs])
+    memory_str = "\n".join(chat_memory)
     prompt = (
         "Beantworte die folgende Frage nur auf Deutsch und nutze die bereitgestellten Notizen als Kontext.\n"
         "Kontext:\n"
         f"{context_str}\n"
+        "Chat-Verlauf:\n"
+        f"{memory_str}\n"
         "Frage:\n"
         f"{query}\n"
         "Antwort:"
     )
-    return prompt
-
-def get_response(query):
-    # Retrieve context
-    context_docs = retriever.retrieve(query)
-    prompt = build_prompt(query, context_docs)
     try:
         sequences = text_generator(prompt, return_full_text=False)
-        return sequences[0]["generated_text"]
+        response = sequences[0]["generated_text"]
     except Exception as e:
         print(f"[ERROR] Model generation failed: {e}")
-        return "Fehler: Die Antwort konnte nicht generiert werden."
-
-def start_socket_server(host='127.0.0.1', port=65501):
-    print(f"[INFO] Starting chat engine socket server on {host}:{port}")
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        server_socket.bind((host, port))
-        server_socket.listen()
-        print("[INFO] Chat engine is ready and listening for connections...")
-
-        while True:
-            conn, addr = server_socket.accept()
-            with conn:
-                print(f"[INFO] Connected by {addr}")
-                try:
-                    data = conn.recv(4096)
-                    if not data:
-                        print("[WARNING] Received empty data.")
-                        continue
-                    query = data.decode('utf-8')
-                    print(f"[PROMPT] {query}")
-                    response = get_response(query)
-                    conn.sendall(response.encode('utf-8'))
-                    print("[INFO] Response sent.")
-                except Exception as e:
-                    print(f"[ERROR] Communication error: {e}")
-                    error_msg = "Fehler: Die Verbindung zum Modellserver ist fehlgeschlagen."
-                    conn.sendall(error_msg.encode('utf-8'))
+        response = "Fehler: Die Antwort konnte nicht generiert werden."
+    return jsonify({"response": response})
 
 if __name__ == "__main__":
-    start_socket_server()
+    app.run(host="0.0.0.0", port=65501)

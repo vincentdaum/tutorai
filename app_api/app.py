@@ -2,74 +2,7 @@ from flask import Flask, render_template, jsonify, request, redirect, session, f
 from functools import wraps
 from passlib.hash import sha256_crypt
 from pymongo import MongoClient
-
-from llama_index.llms.huggingface.base import HuggingFaceLLM
-from llama_index.embeddings.huggingface.base import HuggingFaceEmbedding
-from llama_index.core import (
-    VectorStoreIndex,
-    StorageContext,
-    load_index_from_storage,
-    Settings
-)
-
-from llama_index.core.memory import ChatMemoryBuffer
 import requests
-from llama_index.core.storage.chat_store import SimpleChatStore
-
-
-# Setup HuggingFace LLM und Embeddings
-llm = HuggingFaceLLM(
-    model_name="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
-    tokenizer_name="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
-    context_window=1024,
-    max_new_tokens=256,
-    device_map="auto"
-)
-
-embedding_llm = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-Settings.llm = llm
-Settings.embed_model = embedding_llm
-Settings.chunk_size = 256
-
-
-# Lade Index aus Speicher
-storage_context = StorageContext.from_defaults(persist_dir="./storage")
-index = load_index_from_storage(storage_context=storage_context)
-
-
-chat_store = SimpleChatStore()
-memory = ChatMemoryBuffer.from_defaults(
-    token_limit=256,
-    chat_store=chat_store,
-    chat_store_key="user1",
-)
-
-chat_store.persist(persist_path="chat_store.json")
-loaded_chat_store = SimpleChatStore.from_persist_path(
-    persist_path="chat_store.json"
-)
-
-def web_search(query):
-    response = requests.get(f"https://api.example.com/search?q={query}")
-    return response.json()['results']
-
-
-chat_engine = index.as_chat_engine(
-    chat_mode="condense_plus_context",
-    memory=memory,
-    llm=llm,
-    context_prompt=(
-        "Answer only in German. "
-        "You are a German chatbot, able to have normal interactions, as well as talk "
-        "about modules, technical information about the modules, and informations from the Technical University of Berlin. "
-        "Here are the relevant documents for the context:\n"
-        "{context_str}"
-        "\nInstruction: Use the previous chat history, or the context above, to interact and help the user."
-    ),
-    verbose=False,
-    fallback_handler=web_search,
-)
 
 
 app = Flask(__name__)
@@ -146,11 +79,23 @@ def register():
 def incoming_message():
     data = request.get_json()
     query = data["message"]
-
-    response = chat_engine.stream_chat(query)
-    response_return = ""
-    for token in response.response_gen:
-        response_return += token
+    # Retrieve chat memory for the user
+    chat_doc = chats_collection.find_one({'username': session['username']})
+    chat_memory = chat_doc['chat'] if chat_doc and 'chat' in chat_doc else []
+    # Send request to chat engine HTTP API
+    try:
+        response = requests.post(
+            "http://127.0.0.1:65501/chat",
+            json={"message": query, "chat_memory": chat_memory},
+            timeout=120
+        )
+        response.raise_for_status()
+        response_data = response.json()
+        response_return = response_data.get("response", "Fehler: Keine Antwort vom Chatbot.")
+    except Exception as e:
+        print(f"[ERROR] Chat engine request failed: {e}")
+        response_return = "Fehler: Die Verbindung zum Chatbot ist fehlgeschlagen."
+    # Optionally, update chat memory in DB here
     return jsonify({"message": response_return})
 
 @app.post("/rate")

@@ -9,29 +9,9 @@ services:
       - mongo_data:/data/db
       - ./mingo_init.sh:/docker-entrypoint-initdb.d/mongo_init.sh
     env_file:
-      - $HOME/REPO/secrets/tutorai.env
+      - /home/vincent/REPO/secrets/tutor.env
     networks:
       - tutorai-network
-
-  tutorai-chat-engine:
-    build:
-      context: ../chat_engine
-      dockerfile: Dockerfile
-    container_name: tutorai-chat-engine
-    volumes:
-      - ../chat_engine/data:/app/data
-      - ../chat_engine/config.json:/app/config.json
-    ports:
-      - "65501:65501"
-    networks:
-      - tutorai-network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
 volumes:
   mongo_data:
