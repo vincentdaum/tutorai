@@ -1,20 +1,61 @@
-services: 
-  tutorai-mongo: 
+services:
+  tutorai-mongo:
     image: mongo:latest
     container_name: tutorai-mongo
-    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-      - ./mingo_init.sh:/docker-entrypoint-initdb.d/mongo_init.sh
+      - ./mongo_init.sh:/docker-entrypoint-initdb.d/mongo_init.sh
     env_file:
-      - /home/vincent/REPO/secrets/tutor.env
+      - /home/vincent/Repo/secrets/tutor.env
     networks:
       - tutorai-network
 
+  tutorai-chat-engine:
+    build:
+      context: ../chat_engine
+      dockerfile: Dockerfile
+    container_name: tutorai-chat-engine
+    volumes:
+      - ../chat_engine/data:/app/data
+      - ../chat_engine/config.json:/app/config.json
+      - huggingface_cache:/root/.cache/huggingface  # <-- HuggingFace model cache
+    ports:
+      - "65501:65501"
+    networks:
+      - tutorai-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  tutorai-app:
+    build:
+      context: ../app_api
+      dockerfile: Dockerfile
+    container_name: tutorai-app
+    volumes:
+      - ../app_api/static:/app/static
+      - ../app_api/templates:/app/templates
+    ports:
+      - "5001:5001"
+    networks:
+      - tutorai-network
+    depends_on:
+      - tutorai-mongo
+      - tutorai-chat-engine
+
 volumes:
   mongo_data:
+  huggingface_cache:
 
 networks:
   tutorai-network:
+

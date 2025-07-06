@@ -21,9 +21,6 @@ RUN pip install --upgrade pip && \
     pip install torch --index-url https://download.pytorch.org/whl/cu121 && \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Install additional dependencies for transformers, llama-index, auto-gptq
-RUN pip install transformers auto-gptq llama-index llama-index-llms-huggingface llama-index-embeddings-huggingface
-
 # Create app directory
 WORKDIR /app
 
@@ -36,4 +33,4 @@ COPY config.json ./
 EXPOSE 65501
 
 # Start the chat engine server
-CMD ["python", "chat_engine/chat_engine_llama.py"]
+CMD ["python", "chat_engine_llama.py"]

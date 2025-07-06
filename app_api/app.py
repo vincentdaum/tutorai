@@ -85,7 +85,7 @@ def incoming_message():
     # Send request to chat engine HTTP API
     try:
         response = requests.post(
-            "http://127.0.0.1:65501/chat",
+            "http://tutorai-chat-engine:65501/chat",
             json={"message": query, "chat_memory": chat_memory},
             timeout=120
         )
