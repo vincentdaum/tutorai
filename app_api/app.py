@@ -3,13 +3,20 @@ from functools import wraps
 from passlib.hash import sha256_crypt
 from pymongo import MongoClient
 import requests
+import os
 
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# MongoDB Setup
-CONNECTION_STRING = "mongodb://localhost:27017"
+
+MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
+MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
+MONGO_HOST = "tutorai-mongo"
+MONGO_PORT = os.getenv("MONGO_PORT", "27017")  # Default to 27017 if not set
+
+CONNECTION_STRING = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/"
+
 mongo_client = MongoClient(CONNECTION_STRING)
 mongo_db = mongo_client['tutorai']
 users_collection = mongo_db['users']
